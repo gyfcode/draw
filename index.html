@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>画板</title>
+	<link rel="stylesheet" href="css/iconfont.css">
+	<script src="jquery.min.js"></script>
+	<script src="close-pixelate.js"></script>
+	<script src="palette.js"></script>
+	<style>
+	html,body{
+		height: 100%;
+		overflow: hidden;
+		margin: 0;
+		background: url(bg.jpg);
+		background-size: cover;
+	}
+	.paletteBox{
+		width: 1000px;
+		height: 100%;
+		margin: 0 auto;
+		background: #eee;
+		/*box-sizing:border-box;*/
+		position: relative;
+		border: 1px solid #2a2a2a;
+	}
+	.paletteHeader{
+		z-index: 2;
+		position: absolute;
+		top: 0;
+		/*border-bottom: 1px solid #ccc;*/
+		width: 100%;
+		height: 40px;
+		box-sizing:border-box;
+		background: #535353;
+		text-align: center;
+		line-height: 40px;
+		color: #bbbbbb;
+	}
+	.paletteBottom{
+		box-sizing:border-box;
+		position: absolute;
+		top:0;
+		right: 0;
+		padding-top: 40px;
+		width: 100%;
+		height: 100%;
+		background: #515151;
+	}
+	.paletteBottom .toolsBox{
+		float: left;
+		width: 110px;
+		margin-left: 10px;
+		height: 100%;
+		background: #535353;
+		border: 1px solid #292929;
+		box-sizing:border-box;
+		line-height: 26px;
+		color: #c4c4c4;
+		padding: 0 10px;
+	}
+	.toolsBox>div{
+		border-bottom: 1px solid #524747;
+	}
+	.paletteBottom .palette{
+		box-sizing:border-box;
+		padding: 8px 10px;
+		float: left;
+		width: 850px;
+		height: 100%;
+		background: #262626;
+		position: relative;
+	}
+	canvas{
+		box-shadow: 0 0 15px #000;
+		background: #fff;
+		position: absolute;
+		top: 0;
+	}
+	.copy{
+		width: 830px;
+		height: 610px;
+		/*background: #ccc;*/
+		/*opacity: .3;*/
+		position: absolute;
+		top:0;
+		z-index:3
+	}
+	.xpBox{
+		position: absolute;
+		top:0;
+		left: 0;
+		background: rgba(0,0,0,0.2);
+		width: 20px;
+		height: 20px;
+		z-index:2;
+		display: none;
+	}
+	input[type=file]{
+		opacity: 0;
+		position: absolute;
+
+
+	}
+	#cx,#xpcx,#textcx{
+		width: 50px;
+		
+
+	}
+	::before{
+		margin-right: 10px;
+	}
+	p{
+		margin: 0;
+	}
+	#file span{
+		position: relative;
+		display: block;
+		overflow: hidden;
+	}
+	img{
+		width: 0;
+		height: 0;
+		overflow: hidden;
+	}
+	.paletteInner{
+		width: 100%;
+		height: 100%;
+		position: relative;
+	}
+	textarea{
+		position: absolute;
+		border: 1px solid #ccc;
+		z-index: 999;
+		display: none;
+	}
+	</style>
+</head>
+<body>
+
+	<div class="paletteBox">
+		<div class="paletteHeader">
+			画板
+		</div>
+		<div class="paletteBottom">
+			<div class="toolsBox">
+				<div class="iconfont icon-xinjian" id="new">新建</div>
+				<div class="iconfont icon-baocun" id="save">保存</div>
+				<div class="iconfont icon-chehui" id="chehui">撤回</div>
+				<div class=""><span id="text" class="iconfont icon-wenzi"></span><input type="range" id="textcx" min='20' max='100' value="20"></div>
+				<div class="iconfont icon-juxing" id="rect">矩形</div>
+				<div class="iconfont icon-iconfontyuan" id="arc">圆</div>
+				<div class="iconfont icon-qianbi" id="pencil">铅笔</div>
+				<div class="iconfont icon-t_zhixian" id="line">直线</div>
+				<div class="iconfont icon-wujiaoxingkong" id="jiao">多角星</div>
+				<div class="iconfont icon-iconfontwubianxing" id="bian">多边形</div>
+				<p id="file">
+					<span class="iconfont icon-daoru-copy"><input type="file" >导入</span>
+					<span id="gray" class="iconfont icon-masaike">黑白</span>
+					<span id="fx" class="iconfont icon-xianfanxiang">反向</span>
+					<span id="gsmh" class="iconfont icon-mohu">模糊</span>
+					
+					<span id="msk" class="iconfont icon-masaike">马赛克</span>
+				</p>
+				<hr>
+				<p class="iconfont icon-icon"><input type="range" id="cx" min='1' max='100' value="1"></p>
+				<p class="iconfont icon-color"><input type="color" id="fillStyle"></p>
+				<p class="iconfont icon-yanse"><input type="color" id="strokeStyle"></p>
+				<p class="iconfont icon-shuazisolid" id="fill">填充</p>
+				<p class="iconfont icon-shuaziline" id="stroke">描边</p>
+				<p><span id="eraser" class="iconfont icon-cuban2xiangpica"></span><input type="range" id="xpcx" min='20' max='100' value="20"></p>
+			</div>
+			<div class="palette">
+				<div class="paletteInner">
+					<div class="copy"></div>
+					<div class="xpBox"></div>
+					<textarea name="" id="" cols="30" rows="10"></textarea>
+				</div>
+				
+
+			</div>
+		</div>
+	</div>
+	<img src="1.jpg" alt="">
+</body>
+<script>
+	var copy=$('.copy')[0];
+	var flag=true;//只能新建一个画布;
+	// var xpflag=true;//点击其他的，让橡皮消失
+	var newflag=false;
+	var textflag=true;
+	var palt;
+	var cobj;
+	var can;
+	var xpBox=$('.xpBox')
+	$('#new').click(function() {
+		if(flag){
+			flag=false;
+			newflag=true;
+			can=$('<canvas width="830" height="610"></canvas>')[0];
+
+			$(can).appendTo('.paletteInner');
+
+			cobj=can.getContext('2d');
+
+			palt=new palette(can,cobj,copy)
+			draw();
+		}
+	})
+
+	$('.toolsBox>div:not(#new)').click(function(){
+		if(!newflag){
+			alert("请新建画布")
+		}
+		
+	})
+	function draw(){
+		$('#rect').click(function(){
+			palt.xpflag=false;
+			console.log(palt)
+			palt.type=this.id;
+			palt.draw();
+		});
+		$('#line').click(function(){
+			palt.xpflag=false;
+
+			console.log(palt)
+			palt.type=this.id;
+			palt.draw();
+		});
+		$('#pencil').click(function(){
+			palt.type=this.id;
+			palt.pencil();
+		});
+		$('#arc').click(function(){
+			palt.xpflag=false;
+			console.log(palt)
+			palt.type=this.id;
+			palt.draw();
+		});
+		$('#bian').click(function(){
+			palt.xpflag=false;
+			var bianNum=prompt("请输入边数",'5');
+		
+			palt.bianNum=bianNum;
+			console.log(palt)
+			palt.type=this.id;
+			palt.draw();
+		});
+		$('#jiao').click(function(){
+			palt.xpflag=false;
+			var jiaoNum=prompt("请输入边数",'5');
+		
+			palt.jiaoNum=jiaoNum;
+			console.log(palt)
+			palt.type=this.id;
+			palt.draw();
+		})
+		$('#fill').click(function(){
+			palt.style='fill';
+		
+		})
+		$('#stroke').click(function(){
+			palt.style='stroke';
+		
+		})
+		$('#fillStyle').change(function(){
+			palt.fillStyle=$(this).val();
+		})
+		$('#strokeStyle').change(function(){
+			palt.strokeStyle=$(this).val();
+		})
+		$('#cx').change(function(){//线条
+			palt.lineWidth=this.value;
+
+		})
+		//撤回
+		$('#chehui').click(function(){
+			palt.historyArr.pop();
+			console.dir(palt.historyArr)
+			if(palt.historyArr.length>0){
+				palt.cobj.putImageData(palt.historyArr[palt.historyArr.length-1],0,0);
+				
+			}
+			if(palt.historyArr.length==0){
+				palt.cobj.clearRect(0,0,830,610);
+				// setTimeout(function(){
+				// 	alert("已经不能撤退了")
+				// },0)
+				
+
+			}
+			
+		})
+		$("#save").click(function(){
+			console.log(can)
+			 var image = can.toDataURL("image/png").replace("image/png", "image/octet-stream");   
+			 // img.src=image
+             window.location.href=image; // it will save locally  
+		})
+
+		$('#eraser').click(function(){
+			palt.xpflag=true;
+			palt.xp(xpBox)
+		})
+		$('#xpcx').change(function(){//橡皮大小
+			palt.xpw=this.value;
+			palt.xph=this.value;
+		})
+		//导入图片
+		$('input[type=file]').change(function(){
+			var imgData=this.files[0];
+			var fileReader=new FileReader();
+			fileReader.readAsDataURL(imgData);
+			console.log(fileReader)
+			fileReader.onload=function(e){
+				$('img').attr('src',e.target.result)
+				palt.cobj.drawImage($('img')[0],0,0);
+				palt.historyArr.push(palt.cobj.getImageData(0,0,830,610))
+				
+			}
+
+		})
+
+		//反向
+		$('#fx').click(function(){
+	
+			if(!newflag){
+				alert("请新建画布");
+				return;
+			}
+			console.log(1)
+			var data=palt.cobj.getImageData(0,0,830,610);
+			var w=data.width;
+			var h=data.height;
+			
+			for(var i=0;i<w*h;i++){
+				data.data[4*i+0]=255-data.data[4*i+0];
+				data.data[4*i+1]=255-data.data[4*i+1];
+				data.data[4*i+2]=255-data.data[4*i+2];
+				data.data[4*i+3]=255;
+			}
+			palt.cobj.putImageData(data,0,0)
+			palt.historyArr.push(palt.cobj.getImageData(0,0,830,610))
+		})
+
+
+
+
+
+		$('#gsmh').click(function(){
+
+	       var data=palt.cobj.getImageData(0,0,830,610);
+
+
+	        var r=10;
+	        var quanzhong=getQuanzhong(r);
+
+	        var width=data.width;
+	        var height=data.height;
+
+	        for(var i=0;i<height;i++){//i==y
+	            for(var j=0;j<width;j++){ //j=x
+
+	                data.data[width*4*i+j*4+0]=getVal(j,i,0);
+	                data.data[width*4*i+j*4+1]=getVal(j,i,1);
+	                data.data[width*4*i+j*4+2]=getVal(j,i,2);
+	                data.data[width*4*i+j*4+3]=255;
+
+	            }
+	        }
+
+	        palt.cobj.putImageData(data,0,0);
+
+
+	        function getVal(x,y,index){
+	                var arr=[];
+	                for(var i=x-r;i<x+r;i++){
+	                    for(var j=y-r;j<y+r;j++){
+	                        var newx=i;
+	                        var newy=j;
+	                        if(newx<0){
+	                            newx=0;
+	                        }
+	                        if(newy<0){
+	                            newy=0
+	                        }
+	                        if(newx>width-1){
+	                            newx=width;
+	                        }
+	                        if(newy>height-1){
+	                            newy=height;
+	                        }
+	                        arr.push(data.data[width*4*newy+newx*4+index]);
+	                    }
+	                }
+
+	                var color=0;
+	                for(var i=0;i<arr.length;i++){
+	                    color+=arr[i]*quanzhong[i]
+	                }
+
+	                return color;
+	        }
+
+	        function getQuanzhong(r){
+	            var arr=[];
+	            var pi=Math.PI;
+	            var e=Math.E;
+	            var sum=0;
+	            for(var x=-r;x<=r;x++){
+	                    for(var y=-r;y<=r;y++){
+	                      var val=1/(2*pi*r*r)*Math.pow(e,-((x*x+y*y)/(2*r*r)));
+	                      sum+=val;
+	                       arr.push(val);
+	                    }
+	            }
+
+	            for(var i=0;i<arr.length;i++){
+
+	                arr[i]=arr[i]/sum;
+	            }
+
+	            return arr;
+	        }
+		})
+		
+		
+
+		function wrap(text,initx,inity,width,height){
+			var str=text;
+			var x=initx;
+			for(var i=0;i<str.length;i++){
+				palt.cobj.fillText(str[i],initx,inity);
+				initx+=palt.cobj.measureText(str[i]).width;
+				if(initx>x+width){
+					initx=x;
+					inity+=height;
+
+				}
+				console.log(initx+'......'+inity+'.....'+height)
+				
+				// console.log()
+			}
+		}
+		var ox=0;
+		var oy=0;
+		var fontSize=12;
+		$('#text').click(function(){
+			//
+			palt.copy.onmousedown=function(e){
+				if(!textflag){
+					return;
+				}
+				textflag=false;
+
+				ox=e.offsetX;
+				oy=e.offsetY;
+				 $('textarea').css({display:'block',left:ox,top:oy,fontSize:fontSize+'px'})
+				 setTimeout(function(){
+				 	$('textarea').focus()
+				 },0)
+			}
+		})
+		$('#textcx').change(function(){//字体大小
+			fontSize=this.value;
+		})
+		$('textarea').blur(function(){
+			var val=this.value;
+			var width=$('textarea').width();
+			console.log(val);
+			palt.cobj.font=fontSize+"px 宋体";
+			palt.cobj.textBaseline="top";
+			console.log(palt.cobj)
+			wrap(val,Number(ox),Number(oy),width,Number(fontSize))
+			palt.historyArr.push(palt.cobj.getImageData(0,0,830,610))
+			$("textarea").val("").css("display","none");
+			textflag=true;
+		})
+
+
+		//黑白
+		$('#gray').click(function(){
+			if(!newflag){
+				alert("请新建画布");
+				return;
+			}
+			console.log(1)
+			var data=palt.cobj.getImageData(0,0,830,610);
+			var w=data.width;
+			var h=data.height;
+			
+			for(var i=0;i<w*h;i++){
+				var red=data.data[4*i+0];
+				var green=data.data[4*i+1];
+				var blue=data.data[4*i+2];
+				var gray=parseInt((red+green+blue)/3);//把R  G   B
+				data.data[4*i+0]=gray;
+				data.data[4*i+1]=gray;
+				data.data[4*i+2]=gray;
+			}
+			palt.cobj.putImageData(data,0,0)
+			palt.historyArr.push(palt.cobj.getImageData(0,0,830,610))
+		})
+
+		
+	}
+</script>
+</html>
